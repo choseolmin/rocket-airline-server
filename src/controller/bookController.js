@@ -1,29 +1,61 @@
 const flights = require('../repository/flightList');
-// 항공편 예약 데이터를 저장합니다.
 let booking = [];
 
 module.exports = {
-  // [GET] /book 요청을 수행합니다.
-  // 전체 데이터 혹은 요청 된 flight_uuid, phone 값과 동일한 예약 데이터를 조회합니다.
+  
   findById: (req, res) => {
-    // TODO:
-    return res.status(200).json('not implemented');
+    const { flight_uuid, phone } = req.query;
+
+    if (phone) {
+      const result = booking.find(b => b.phone === phone);
+      if (!result) {
+        return res.status(404).json({ message: '예약 정보를 찾을 수 없습니다.' });
+      }
+      
+      const { book_id, ...response } = result;
+      return res.status(200).json(response);
+    }
+
+    if (flight_uuid) {
+      const result = booking
+        .filter(b => b.flight_uuid === flight_uuid)
+        .map(({ book_id, ...rest }) => rest); 
+
+      return res.status(200).json(result);
+    }
+
+  
+    const result = booking.map(({ book_id, ...rest }) => rest); 
+    return res.status(200).json(result);
   },
 
-  // [POST] /book 요청을 수행합니다.
-  // 요청 된 예약 데이터를 저장합니다.
-  // 응답으로는 book_id를 리턴합니다.
-  // Location Header로 예약 아이디를 함께 보내준다면 RESTful한 응답에 더욱 적합합니다.
-  // 참고 링크: https://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api#useful-post-responses
+  // [POST] /book
   create: (req, res) => {
-    // TODO:
-    return res.status(201).json({});
+    const { flight_uuid, name, phone } = req.body;
+
+    const newBooking = {
+      book_id: Date.now().toString(),
+      flight_uuid,
+      name,
+      phone,
+    };
+
+    booking.push(newBooking);
+
+    res.setHeader('Location', `/book/${newBooking.book_id}`);
+    return res.status(201).json({ book_id: newBooking.book_id });
   },
 
-  // [DELETE] /book?phone={phone} 요청을 수행합니다.
-  // 요청 된 phone 값과 동일한 예약 데이터를 삭제합니다.
+  // [DELETE] /book?phone=...
   deleteById: (req, res) => {
-    // TODO:
-    return res.status(200).json('not implemented');
+    const { phone } = req.query;
+
+    if (!phone) {
+      return res.status(400).json({ message: 'phone 값이 필요합니다.' });
+    }
+
+    booking = booking.filter(b => b.phone !== phone);
+    const result = booking.map(({ book_id, ...rest }) => rest); 
+    return res.status(200).json(result);
   },
 };
